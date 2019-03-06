@@ -1,7 +1,33 @@
-Develop a RESTful API for CRUD operations on resources using the GoLang and a web toolkit.
-Study the RESTful web services tutorial. Take note of its guidelines for designing RESTful APIs.
-The resources to be managed are objects called sites. A site has the attributes name, role, URI, and a list of zero or more access points (addresses), whereas an access point has the attributes label and URL. All the attributes are strings. Sites are identified by their name, while the access points of a site are identified by their label. Different sites may contain access points with the same label.
-Your API should support CRUD operations on the access points of a site, as well as on the sites. CRUD operations on a site affect its attributes but not its list of access points, with the exception of a delete which cascades to deleting all its access points.
-You should persist the resources in a plain text local file of json objects. Using a database system to persist the resources is optional.
-Use a RESTful client to test your API. Using a json-extension in your web browser and a CLI tool (eg curl or wget) may facilitate the rapid development of a client for testing.
-Submit a zip archive with all your source code, documentation (README, etc), sample datafile(s), and sample (test) output (text output or screenshots).
+
+# CMSC 691 Project 1
+
+## Installation and Dependencies
+
+#### Instructions for installing on Ubuntu 18.10
+
+Setting up Go Environment:
+```
+git clone https://github.com/Mjacks3/OS_Proj_1.git
+cd OS_Proj_1
+go get github.com/gorilla/mux
+go get github.com/go-sql-driver/mysql
+```
+
+Setting up MySQL database:
+```
+sudo apt-get install mysql-server
+sudo systemctl start mysql
+sudo mysql -u root < init.sql
+```
+
+## Running the REST API server
+```
+go run proj1.go
+```
+
+## Interacting with the REST API
+```
+GET - curl 127.0.0.1:8000/site/[name]
+POST - curl -d "[json data]" 127.0.0.1:8000/site/[name]
+DELETE - curl -X "DELETE" 127.0.0.1:8000/site/[name]
+```
