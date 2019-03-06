@@ -27,7 +27,9 @@ go run proj1.go
 
 ## Interacting with the REST API
 ```
-GET - curl 127.0.0.1:8000/site/[name]
-POST - curl -d "[json data]" 127.0.0.1:8000/site/[name]
+CREATE - curl --header "Content-Type: application/json" --request POST --data '[j
+son data]' 127.0.0.1:8000/site/
+READ - curl 127.0.0.1:8000/site/[name]
 DELETE - curl -X "DELETE" 127.0.0.1:8000/site/[name]
+UPDATE - ???
 ```
