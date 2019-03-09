@@ -60,8 +60,8 @@ func CreateSite(w http.ResponseWriter, r *http.Request){
     for _, AP := range site.APs{
 
         // Prepare MySQL statement for creating access point
-	query = "INSERT INTO site_aps (ap, url, name) VALUES (?, ?, ?)"
-	stmt, err = db.Prepare(query)
+	     query = "INSERT INTO site_aps (ap, url, name) VALUES (?, ?, ?)"
+	     stmt, err = db.Prepare(query)
         if err != nil {
             fmt.Println(err)
         }
@@ -129,10 +129,12 @@ func ReadSite(w http.ResponseWriter, r *http.Request){
             fmt.Println(err)
         }
         var AP AccessPoint
-	AP.Label = label
-	AP.URL = url
-	APs = append(APs, AP)
+	      AP.Label = label
+	      AP.URL = url
+	      APs = append(APs, AP)
     }
+
+    fmt.Println(label + " " + url)
 
     // Construct JSON response
     var response Site
@@ -147,7 +149,7 @@ func ReadSite(w http.ResponseWriter, r *http.Request){
 
     // Send response to client
     w.Header().Set("Content-Type", "application/json")
-    fmt.Fprintf(w, string(response_json))
+    fmt.Fprintf(w, string(response_json)+"\n")
 
     // TODO: Shouldn't send a response if no results in db
 }
@@ -155,7 +157,109 @@ func ReadSite(w http.ResponseWriter, r *http.Request){
 
 func UpdateSite(w http.ResponseWriter, r *http.Request){
     fmt.Println("Called UpdateSite!")
-    // TODO
+
+    // Parse PUT request
+    request := mux.Vars(r)
+
+    // Decode request JSON
+    var site Site
+    decoder := json.NewDecoder(r.Body)
+    err := decoder.Decode(&site)
+    if err != nil{
+        fmt.Println(err)
+    }
+
+    //fmt.Println("Decoder: ",decoder)
+    fmt.Println("request:", request["name"])
+
+    // Open MySQL database
+    db, err := sql.Open("mysql", "proj1user:password@/proj1")
+    if err != nil {
+        fmt.Println(err)
+    }
+    defer db.Close()
+
+    // Prepare MySQL query for sites
+    query := "SELECT name, role, uri FROM sites WHERE name=?"
+    stmt, err := db.Prepare(query)
+    if err != nil {
+        fmt.Println(err)
+    }
+    defer stmt.Close()
+
+    // Retrieve query results
+    var name string
+    var role string
+    var uri string
+    err = stmt.QueryRow(request["name"]).Scan(&name, &role, &uri)
+    if err != nil{
+        fmt.Println(err)
+    }
+
+    // Prepare MySQL query for site's access points
+    query = "SELECT ap, url FROM site_aps WHERE name=?"
+    stmt, err = db.Prepare(query)
+    if err != nil {
+        fmt.Println(err)
+    }
+    defer stmt.Close()
+
+    // Retrieve query results
+    var APs []AccessPoint
+    var label string
+    var url string
+    rows, err := stmt.Query(request["name"])
+    if err != nil {
+        fmt.Println(err)
+    }
+    for rows.Next(){
+        err := rows.Scan(&label, &url)
+        if err != nil {
+            fmt.Println(err)
+        }
+        var AP AccessPoint
+	      AP.Label = label
+	      AP.URL = url
+	      APs = append(APs, AP)
+    }
+    fmt.Println("updating record:", name, role, uri, label, url)
+    fmt.Println("With new att: ", site.Name, site.Role, site.URI) // need to add the AP
+
+    //now that we have the current record, update it to the new one
+    query = "UPDATE sites SET name=? WHERE name=?"
+    stmt, err = db.Prepare(query)
+    if err != nil {
+        fmt.Println(err)
+    }
+    defer stmt.Close()
+
+    // Execute MySQL statement
+    _, err = stmt.Exec(site.Name, name)
+    if err != nil {
+        fmt.Println(err)
+    }
+/*
+    // Iterate through access points
+    for _, AP := range site.APs{
+
+        // Prepare MySQL statement for creating access point
+	     query = "INSERT INTO site_aps (ap, url, name) VALUES (?, ?, ?)"
+	     stmt, err = db.Prepare(query)
+        if err != nil {
+            fmt.Println(err)
+        }
+
+        // Execute MySQL statement
+        _, err = stmt.Exec(AP.Label, AP.URL, site.Name)
+        if err != nil {
+            fmt.Println(err)
+        }
+    }
+
+    // Send response to client
+    w.Header().Set("Content-Type", "application/json")
+    fmt.Fprintf(w, string(response_json))
+    */
 }
 
 

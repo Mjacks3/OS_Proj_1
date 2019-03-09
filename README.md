@@ -30,5 +30,5 @@ go run proj1.go
 CREATE - curl --header "Content-Type: application/json" --request POST --data '[json data]' 127.0.0.1:8000/site/
 READ - curl 127.0.0.1:8000/site/[name]
 DELETE - curl -X "DELETE" 127.0.0.1:8000/site/[name]
-UPDATE - ???
+UPDATE - curl --header "Content-Type: application/json" --request POST --data '{"Name":"Name77", "Role" : "role3", "URI" : "URI3", "AP" : [{"Label" : "Label3", "URL" : "testURL1.com"}]}' '127.0.0.1:8000/site/Name5'
 ```
