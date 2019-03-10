@@ -13,7 +13,7 @@ CREATE TABLE sites (
 );
 
 CREATE TABLE site_aps (
-    ap varchar(128) PRIMARY KEY,
+    label varchar(128) PRIMARY KEY,
     url varchar(256) NOT NULL,
     name varchar(128) NOT NULL,
     FOREIGN KEY (name) REFERENCES sites(name) ON DELETE CASCADE
