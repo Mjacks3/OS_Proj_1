@@ -34,9 +34,9 @@ DELETE: curl -X "DELETE" 127.0.0.1:8000/site/[site_name]
 UPDATE: curl -X "PUT" -H "Content-Type: application/json" -d '[json data]' 127.0.0.1:8000/site/[site_name]
 ```
 ### AccessPoint Interaction
-'''
+```
 CREATE: curl --header "Content-Type: application/json" --request POST --data '[json data]' 127.0.0.1:8000/site/[site_name]/ap/
 READ: curl 127.0.0.1:8000/ap/[ap_name]
 DELETE: curl -X "DELETE" 127.0.0.1:8000/ap/[ap_name]
-UPDATE: TO DO
-'''
+UPDATE: curl -X "PUT" -H "Content-Type: application/json" -d '[json data]' 127.0.0.1:8000/ap/[ap_name]
+```

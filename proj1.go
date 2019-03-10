@@ -9,12 +9,13 @@ import (
     "github.com/gorilla/mux"
 )
 
-
+// defines the accesspoint structure
 type AccessPoint struct {
     Label string `json:"label"`
     URL string `json:"url"`
 }
 
+// definse the site structure
 type Site struct {
     Name string `json:"name"`
     Role string `json:"role"`
@@ -23,7 +24,11 @@ type Site struct {
 }
 
 
-
+// called when a corresponding http request is passed in
+// request should be sent with json formatted data to be place in the table
+// ie: '{"name":"name1", "role":"role1","uri":"uri1","label":[{"ap":"ap1","url":"url1"}]}''
+// generates and inserts entry that matches call provided the site doesn't already exist as a primary ket
+// empty fields in the passed in json data will be left as empty strings, and the list of aps will be null unless specified
 func CreateSite(w http.ResponseWriter, r *http.Request){
 
     fmt.Println("Called CreateSite!")
@@ -67,7 +72,8 @@ func CreateSite(w http.ResponseWriter, r *http.Request){
             fmt.Println(err)
         }
 
-        // Execute MySQL statement
+        // Execute MySQL statement for inserting aps
+        // APs will automatically be linked the the proper site because of the foreign key [name]
         _, err = stmt.Exec(AP.Label, AP.URL, site.Name)
         if err != nil {
             fmt.Println(err)
@@ -75,7 +81,9 @@ func CreateSite(w http.ResponseWriter, r *http.Request){
     }
 }
 
-
+// called when a corresponding http request is passed in
+// request will be processed to determine which site to be queried
+// generates and prints out json object representing queried site to user
 func ReadSite(w http.ResponseWriter, r *http.Request){
 
     fmt.Println("Called ReadSite!")
@@ -107,6 +115,13 @@ func ReadSite(w http.ResponseWriter, r *http.Request){
         fmt.Println(err)
     }
     fmt.Println("result:", name, role, uri)
+
+    // if name is empty string, no site name existed and no output should be produced
+    if name == "" {
+        w.Header().Set("Content-Type", "text/plain")
+        fmt.Fprintf(w, "No such site found\n")
+        return
+    }
 
     // Prepare MySQL query for site's access points
     query = "SELECT label, url FROM site_aps WHERE name=?"
@@ -150,11 +165,15 @@ func ReadSite(w http.ResponseWriter, r *http.Request){
     w.Header().Set("Content-Type", "application/json")
     fmt.Fprintf(w, string(response_json)+"\n")
 
-    // TODO: Shouldn't send a response if no results in db
 }
 
 
-
+// called when a corresponding http request is passed in
+// will only update attributes of site:[site_name]
+// name is primary key and cannot be updated, if change is desired,
+// then user is responsible for deleting entry and creating updated entry to replace it
+// is given json data that holds the attribute(s) to be updated and changes their value in the db
+// access points must be updated via their own function call
 func UpdateSite(w http.ResponseWriter, r *http.Request){
     fmt.Println("Called UpdateSite!")
 
@@ -169,17 +188,23 @@ func UpdateSite(w http.ResponseWriter, r *http.Request){
     if err != nil{
         fmt.Println(err)
     }
-    // decodes request, then checks to see what we're updating
-    query := "UPDATE sites SET "//name=? WHERE name=?"
+
+    // generates the base of the query and then fills it in once properly formatted
+    query := "UPDATE sites SET "
+    // if the role is not an empty string, user requested that it be updated, and it is added to the query
     if site.Role != "" {
         query += "role='"+site.Role+"'"
     }
+    // if the uri is not an empty string, user requested that it be updated, and it is added to the query
     if site.URI != "" {
+        // checks to see if role is also being updated, so a comma is needed for query format
         if site.Role != "" { query+=", "}
         query += "uri='"+site.URI+"'"
     }
+    // adds on the last piece needed to generate a valid query
     query += " WHERE name=?"
-    
+
+    // Open MySQL Database
     db, err := sql.Open("mysql", "proj1user:password@/proj1")
     if err != nil {
         fmt.Println(err)
@@ -187,8 +212,7 @@ func UpdateSite(w http.ResponseWriter, r *http.Request){
     defer db.Close()
 	fmt.Println(query)
 
-    //now that we have the current record, update it to the new one
-    //query = "UPDATE sites SET name=? WHERE name=?"
+    // Prepares the query for execution
     stmt, err := db.Prepare(query)
     if err != nil {
         fmt.Println(err)
@@ -204,7 +228,9 @@ func UpdateSite(w http.ResponseWriter, r *http.Request){
 }
 
 
-
+// called when a corresponding http request is passed in
+// if no site by the requested name exists, function does nothing
+// MySQL cascade on delete is used to ensure all underlying APs are deleted with the site
 func DeleteSite(w http.ResponseWriter, r *http.Request){
 
     fmt.Println("Called DeleteSite!")
@@ -233,8 +259,12 @@ func DeleteSite(w http.ResponseWriter, r *http.Request){
 }
 
 
-
-
+// called when a corresponding http request is passed in
+// request should be sent with json formatted data to be place in the table
+// ie: '{"ap":"ap1","url":"url1"}''
+// generates and inserts entry that matches call provided the label doesn't already exist as a primary key
+// empty fields in the passed in json data will be left as empty strings
+// automatically associates AP with the user provided site by using site.name as foreign key
 func CreateSiteAP(w http.ResponseWriter, r *http.Request){
 
     fmt.Println("Called CreateSiteAP!")
@@ -266,7 +296,6 @@ func CreateSiteAP(w http.ResponseWriter, r *http.Request){
     defer stmt.Close()
 
     // Execute MySQL statement
-    
     _, err = stmt.Exec(siteAP.Label, siteAP.URL, request["name"])
     if err != nil {
         fmt.Println(err)
@@ -274,7 +303,9 @@ func CreateSiteAP(w http.ResponseWriter, r *http.Request){
 
 }
 
-
+// called when a corresponding http request is passed in
+// request will be processed to determine which site to be queried
+// generates and prints out json object representing queried AP to user
 func ReadSiteAP(w http.ResponseWriter, r *http.Request){
 
     fmt.Println("Called ReadSiteAP!")
@@ -288,8 +319,6 @@ func ReadSiteAP(w http.ResponseWriter, r *http.Request){
         fmt.Println(err)
     }
     defer db.Close()
-   
-
 
     // Prepare MySQL query for sites
     query := "SELECT label, url FROM site_aps WHERE label=?"
@@ -308,6 +337,13 @@ func ReadSiteAP(w http.ResponseWriter, r *http.Request){
     }
     fmt.Println("result:", label, url)
 
+    // if label is empty string, requested label does not exist and user should be notified
+    if label == "" {
+        w.Header().Set("Content-Type", "text/plain")
+        fmt.Fprintf(w, "No such access point found\n")
+        return
+    }
+
     // Construct JSON response
     var response AccessPoint
     response.Label = label
@@ -324,6 +360,11 @@ func ReadSiteAP(w http.ResponseWriter, r *http.Request){
     // TODO: Shouldn't send a response if no results in db
 }
 
+// called when a corresponding http request is passed in
+// will only update attributes of ap:[ap_name] (can only edit url of existing ap)
+// label is primary key and cannot be updated, if change is desired,
+// then user is responsible for deleting entry and creating updated entry to replace it
+// is given json data that holds the attribute(s) to be updated and changes their value in the db
 func UpdateSiteAP(w http.ResponseWriter, r *http.Request){
     fmt.Println("Called UpdateSiteAP!")
 
@@ -338,9 +379,12 @@ func UpdateSiteAP(w http.ResponseWriter, r *http.Request){
     if err != nil{
         fmt.Println(err)
     }
-    // decodes request, then checks to see what we're updating
+
+    // generates query given users input
+    // only url can be updated, so no additional checks needed
     query := "UPDATE site_aps SET url='"+accessPoint.URL+"' WHERE label=?"
-    
+
+    // Open MySQL Database
     db, err := sql.Open("mysql", "proj1user:password@/proj1")
     if err != nil {
         fmt.Println(err)
@@ -364,7 +408,9 @@ func UpdateSiteAP(w http.ResponseWriter, r *http.Request){
 
 }
 
-
+// called when a corresponding http request is passed in
+// if no AP by the requested label exists, function does nothing
+// deletes AP from table
 func DeleteSiteAP(w http.ResponseWriter, r *http.Request){
 
     fmt.Println("Called DeleteSiteAP!")
@@ -372,30 +418,33 @@ func DeleteSiteAP(w http.ResponseWriter, r *http.Request){
     // Parse GET request
     request := mux.Vars(r)
 
-    // Open MySQL database
+    // Open MySQL Database
     db, err := sql.Open("mysql", "proj1user:password@/proj1")
     if err != nil {
         fmt.Println(err)
     }
     defer db.Close()
 
-    // Prepare statement
+    // Prepares Query
     stmt, err := db.Prepare("DELETE FROM site_aps WHERE label=?")
     if err != nil {
         fmt.Println(err)
     }
 
-    // Delete row from sites table
+    // Executes Query
     _, err = stmt.Exec(request["label"])
     if err != nil {
         fmt.Println(err)
     }
 }
 
-
-
-
+// main function of program
+// will cause terminal to hang while executing as it is listening for requests
+// user can use curl to send requests to local host, responses will be sent to terminal user enters curl command from
+// terminal that is running go program will print out debug information
 func main(){
+
+    // Creates a new router for handling curl requests
     router := mux.NewRouter()
 
     // Handlers for site API calls
@@ -404,10 +453,12 @@ func main(){
     router.HandleFunc("/site/{name}", UpdateSite).Methods("PUT") // ???
     router.HandleFunc("/site/{name}", DeleteSite).Methods("Delete")
 
+    // Handlers for access point API calls
     router.HandleFunc("/site/{name}/ap/", CreateSiteAP).Methods("POST")
     router.HandleFunc("/ap/{label}", ReadSiteAP).Methods("GET")
     router.HandleFunc("/ap/{label}", UpdateSiteAP).Methods("PUT")
     router.HandleFunc("/ap/{label}", DeleteSiteAP).Methods("Delete")
+
     // Listen on port 8000 for REST API calls
     fmt.Println("Listening on 127.0.0.1:8000")
     http.ListenAndServe(":8000", router)
